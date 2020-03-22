@@ -63,22 +63,32 @@ export default {
       currentRoom: null,
       handRaised: false,
       hands: [],
+      handsInitialized: false,
       quickRaised: false,
       quicks: [],
+      quickInitialized: false,
       participants: [],
       menubar: null,
     };
   },
   mounted() {
-    if (!ipcRenderer) {
-      return;
-    }
-    ipcRenderer.on('ready', (mb) => {
-      this.menubar = mb;
-      console.log('assigned menubar');
-      this.$forceUpdate();
-    });
-    ipcRenderer.send('app_mounted');
+    this.$nextTick(function () {
+      console.log('mounted', ipcRenderer);
+      if (!ipcRenderer) {
+        return;
+      }
+      ipcRenderer.on('ready', (mb) => {
+        this.menubar = mb;
+        console.log('assigned menubar');
+        this.$forceUpdate();
+      });
+      ipcRenderer.send('app_mounted');
+    })
+  },
+  computed: {
+    roomStateSynced() {
+      return this.handsInitialized && this.quickInitialized;
+    },
   },
   methods: {
     goToRoom(room, person) {
@@ -101,6 +111,7 @@ export default {
         if(!myHand) {
           this.handRaised = false;
         } 
+        this.handsInitialized = true;
         this.notifyIfNecessary(this.hands, hands, '🤚 Someone\'s in the queue');
 
         this.hands = hands
@@ -110,6 +121,7 @@ export default {
         if(!myQuick) {
           this.quickRaised = false;
         }
+        this.quickInitialized = true;
         console.log('notifyIfNecessary');
         this.notifyIfNecessary(this.quicks, quicks, '❗️ Quick Note');
         this.quicks = quicks;

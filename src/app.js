@@ -19,13 +19,13 @@ const mb = menubar({
   },
 });
 
+ipcMain.on('app_mounted', (event) => {
+  console.log('menubar app_mounted');
+  event.reply('ready', mb); // send to renderer
+});
 mb.on('ready', () => {
   mb.on('after-create-window', () => {
     mb.window.openDevTools();
-    ipcMain.on('app_mounted', (event) => {
-      console.log('menubar app_mounted');
-      event.reply('ready', mb); // send to renderer
-    });
     console.log('app is ready');
   });
   // your app code here
