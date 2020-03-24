@@ -15,6 +15,11 @@
     </div>
     <div v-if="currentRoom != null">
       <button class="btn btn-primary input-group-btn" @click="exitRoom()">Exit room </button>
+      <div class="applaud-group">
+        <button class="btn btn-action s-circle" @click="applaud('👏')">👏</button>
+        <button class="btn btn-action s-circle" @click="applaud('👎')">👎</button>
+        <button class="btn btn-action s-circle" @click="applaud('🤷‍♀️')">🤷‍♀️</button>
+      </div>
       <div style="margin: 60px;">
         <div v-if="quicks.length">
           <h3>Quick Interjection</h3>
@@ -33,7 +38,7 @@
       <div style="position: absolute; bottom: 0; width:100%;">
         <span v-if="!handRaised && !quickRaised">
           <button style="width:50%" class="btn btn-primary input-group-btn" @click="toggleHand(true)">🤚 Raise Hand</button>
-          <button style="width:50%" class="btn btn-primary input-group-btn" @click="toggleQuick(true)">❗️Quick Point</button>
+          <button style="width: 50%" class="btn btn-primary input-group-btn" @click="toggleQuick(true)">❗️Quick Point</button>
         </span>
         <button style="width: 100%" v-if="handRaised || quickRaised" class="btn input-group-btn" @click="toggleHand(false)">✅ Lower Hand</button>
       </div>
@@ -43,6 +48,7 @@
 
 <script>
 import channel from './socket.js'
+import hearts from './hearts.js'
 let ipcRenderer = null;
 if (!window.require) {
   console.log('no window.require');
@@ -68,7 +74,7 @@ export default {
       quicks: [],
       quickInitialized: false,
       participants: [],
-      menubar: null,
+      electronWindow: null,
     };
   },
   mounted() {
@@ -78,8 +84,8 @@ export default {
         return;
       }
       ipcRenderer.on('ready', (mb) => {
-        this.menubar = mb;
-        console.log('assigned menubar');
+        this.electronWindow = mb;
+        console.log('assigned electronWindow');
         this.$forceUpdate();
       });
       ipcRenderer.send('app_mounted');
@@ -123,18 +129,23 @@ export default {
         }
         this.quickInitialized = true;
         console.log('notifyIfNecessary');
+
         this.notifyIfNecessary(this.quicks, quicks, '❗️ Quick Note');
         this.quicks = quicks;
 
         this.$forceUpdate();
-      },(participants) => {
+      }, (participants) => {
         console.log(participants);
         this.participants = participants;
         this.$forceUpdate();
+      }, (person, icon) => {
+        if (person != this.person) {
+          hearts.addHearts(icon);
+        }
       });
     },
     notifyIfNecessary(oldHands, newHands, title) {
-      if (!this.menubar) {
+      if (!this.electronWindow) {
         console.log('no menub ar');
         return;
       }
@@ -144,15 +155,19 @@ export default {
       }, {});
       let unseenHands = newHands.filter(h => !oldHandsHash[h] && h !== this.person);
       console.log('oldHands', oldHands, 'newHands', newHands, 'unseenHands', unseenHands);
-      if (unseenHands && unseenHands.length) {
+      if (unseenHands && unseenHands.length && this.roomStateSynced) {
         let myNotification = new Notification(title, {
           body: 'From: ' + unseenHands.join(", ")
         });
 
         myNotification.onclick = () => {
-          this.menubar.showWindow();
+          console.log('clicked notification');
         };
       }
+    },
+    applaud(icon) {
+      channel.push("applaud", {icon});
+      hearts.addHearts(icon);
     },
     exitRoom() {
       this.currentRoom = null;
@@ -192,5 +207,11 @@ export default {
 
 #person-input {
   margin-bottom: 15px;
+}
+
+.applaud-group {
+  position: absolute;
+  top:15px;
+  right: 15px;
 }
 </style>

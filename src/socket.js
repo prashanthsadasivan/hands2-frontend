@@ -9,10 +9,10 @@ export default {
   push(msg, payload) {
     channel.push(msg, payload);
   },
-  joinRoom(room, person, handsCB, quicksCB, presenceCb) {
-    socket.connect()
+  joinRoom(room, person, handsCB, quicksCB, presenceCb, applaudCb) {
+    socket.connect();
     channel = socket.channel(`room:${room}`, {person})
-    presence = new Presence(channel)
+    presence = new Presence(channel);
     channel.join()
       .receive("ok", resp => { console.log("Joined successfully", resp) })
       .receive("error", resp => { console.log("Unable to join", resp) })
@@ -23,6 +23,10 @@ export default {
     channel.on("quicks", payload => {
       console.log('quicks', payload)
       quicksCB(payload.hands)
+    });
+
+    channel.on("applaud", payload => {
+      applaudCb(payload.person, payload.icon);
     });
     const listPeople = () => presenceCb(presence.list((id) => id));
     presence.onSync(listPeople);
