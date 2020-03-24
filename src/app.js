@@ -11,8 +11,8 @@ let icon = `file://${process.cwd()}/dist/favicon.png`
 function createWindow () {
   // Create the browser window.
   let win = new BrowserWindow({
-    width: 400,
-    height: 300,
+    width: 300,
+    height: 800,
     webPreferences: {
       nodeIntegration: true
     },
@@ -24,9 +24,6 @@ function createWindow () {
   });
 
   win.loadURL(url);
-
-  // Open the DevTools.
-  win.webContents.openDevTools()
 }
 
 
