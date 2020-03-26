@@ -21,18 +21,18 @@
         <button class="btn btn-action s-circle" @click="applaud('🤷‍♀️')">🤷‍♀️</button>
       </div>
       <div style="margin: 60px;">
+        <div>
+          Participants: <span v-for="(p, index) in participants" :key="index">{{p}}<span v-if="index < participants.length - 1">, </span></span>
+        </div>
         <div v-if="quicks.length">
           <h3>Quick Interjection</h3>
           <div v-for="(quick, index) in quicks" :key="index">
-            <button style="margin-bottom: 15px; width: 100%" class="btn" @click="toggleQuick(false, quick)">✅ Lower Hand for {{quick}}</button>
+            <button style="margin-bottom: 15px; margin-right: 10px;" class="btn" @click="toggleQuick(false, quick)">✅ <span>{{quick}}</span></button>
           </div>
         </div>
         <h3> Speaking Queue </h3>
         <div v-for="(hand, index) in hands" :key="index">
-          <button style="margin-bottom: 15px; width: 100%" class="btn" @click="toggleHand(false, hand)">✅ Lower Hand for {{hand}}</button>
-        </div>
-        <div>
-          Participants: <span v-for="(p, index) in participants" :key="index">{{p}}<span v-if="index < participants.length - 1">, </span></span>
+          <button style="margin-bottom: 15px; margin-right: 10px;" class="btn" @click="toggleHand(false, hand)">✅ <span>{{hand}}</span></button> 
         </div>
       </div> 
       <div style="position: absolute; bottom: 0; width:100%;">
@@ -75,11 +75,16 @@ export default {
       quickInitialized: false,
       participants: [],
       electronWindow: null,
+      referrer: document.referrer
     };
   },
   mounted() {
     this.$nextTick(function () {
       console.log('mounted', ipcRenderer);
+      if (document.referrer && document.referrer != "") {
+        let splits = document.referrer.split("/");
+        this.room = splits[splits.length - 1];
+      }
       if (!ipcRenderer) {
         return;
       }
