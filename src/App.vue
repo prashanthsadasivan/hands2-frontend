@@ -85,6 +85,10 @@ export default {
         let splits = document.referrer.split("/");
         this.room = splits[splits.length - 1];
       }
+      let localPerson = localStorage.getItem('person');
+      if ( localPerson && localPerson != '') {
+        this.person = localPerson;
+      }
       if (!ipcRenderer) {
         return;
       }

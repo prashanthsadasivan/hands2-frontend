@@ -37,7 +37,6 @@ class Heart {
   }
   
   update() {
-    console.log('update', this.scale, this.grow, this.x, this.y, this.speed);
      this.alpha = ( this.alpha > 0 ) ? ( this.alpha - 0.0045 ) : this.alpha; 
      this.alpha = ( this.alpha < 0 ) ? 0 : this.alpha; 
      
