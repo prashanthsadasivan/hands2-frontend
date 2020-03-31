@@ -86,6 +86,9 @@ export default {
     if (stopped) {
       this.startLoop();
     }
+    if (hearts.length < 10) {
+      hearts.push(new Heart(icon));
+    }
     hearts.push(new Heart(icon));
   }
 }

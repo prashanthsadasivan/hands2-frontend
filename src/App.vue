@@ -19,28 +19,28 @@
         <button class="btn btn-action s-circle" @click="applaud('👏')">👏</button>
         <button class="btn btn-action s-circle" @click="applaud('👎')">👎</button>
         <button class="btn btn-action s-circle" @click="applaud('🤷‍♀️')">🤷‍♀️</button>
+        <button v-if="!isPopout" class="btn btn-action s-circle" @click="popout()">↥</button>
       </div>
       <div style="margin: 60px;">
         <div>
           Participants: <span v-for="(p, index) in participants" :key="index">{{p}}<span v-if="index < participants.length - 1">, </span></span>
         </div>
         <div v-if="quicks.length">
-          <h3>Quick Interjection</h3>
-          <div v-for="(quick, index) in quicks" :key="index">
-            <button style="margin-bottom: 15px; margin-right: 10px;" class="btn" @click="toggleQuick(false, quick)">✅ <span>{{quick}}</span></button>
-          </div>
+          <h3>Quick Point</h3>
+          <ol>
+            <li v-for="(quick, index) in quicks" :key="index">{{quick.person}}</li>
+          </ol>
         </div>
         <h3> Speaking Queue </h3>
-        <div v-for="(hand, index) in hands" :key="index">
-          <button style="margin-bottom: 15px; margin-right: 10px;" class="btn" @click="toggleHand(false, hand)">✅ <span>{{hand}}</span></button> 
-        </div>
-      </div> 
+        <ol>
+          <li v-for="(hand, index) in hands" :key="index">{{hand.person}}</li>
+        </ol>
+      </div>
       <div style="position: absolute; bottom: 0; width:100%;">
-        <span v-if="!handRaised && !quickRaised">
-          <button style="width:50%" class="btn btn-primary input-group-btn" @click="toggleHand(true)">🤚 Raise Hand</button>
-          <button style="width: 50%" class="btn btn-primary input-group-btn" @click="toggleQuick(true)">❗️Quick Point</button>
+        <span>
+          <button style="width: 50%" v-bind:class="{'btn-primary': !handRaised}" class="btn input-group-btn" @click="toggleHand()">{{handBtnText}}</button>
+          <button style="width: 50%" v-bind:class="{'btn-primary': !quickRaised}" class="btn input-group-btn" @click="toggleQuick()">{{quickBtnText}}</button>
         </span>
-        <button style="width: 100%" v-if="handRaised || quickRaised" class="btn input-group-btn" @click="toggleHand(false)">✅ Lower Hand</button>
       </div>
     </div>
   </div>
@@ -68,6 +68,9 @@ export default {
       personError: null,
       currentRoom: null,
       handRaised: false,
+      channelError: null,
+      id: null,
+      isPopout: false,
       hands: [],
       handsInitialized: false,
       quickRaised: false,
@@ -89,6 +92,21 @@ export default {
       if ( localPerson && localPerson != '') {
         this.person = localPerson;
       }
+      let hash = location.hash;
+      if (hash && hash.split('#').length === 2) {
+        try {
+          let params = JSON.parse(atob(hash.split('#')[1]));
+          if (params.room && this.person || params.person) {
+            this.room = params.room;
+            this.person = this.person || params.person;
+          }
+        } catch {
+          console.log('couldnt parse hash');
+        }
+      }
+      if (this.room && this.person) {
+        this.goToRoom(this.room, this.person);
+      }
       if (!ipcRenderer) {
         return;
       }
@@ -102,7 +120,13 @@ export default {
   },
   computed: {
     roomStateSynced() {
-      return this.handsInitialized && this.quickInitialized;
+      return this.handsInitialized && this.quickInitialized && this.id;
+    },
+    handBtnText() {
+      return this.handRaised ? '✅Lower Hand ': '🤚 Raise Hand'; 
+    },
+    quickBtnText() {
+      return this.quickRaised ? '✅Lower Quick' : '❗️Quick Point';
     },
   },
   methods: {
@@ -121,8 +145,14 @@ export default {
       }
       this.currentRoom = room;
       localStorage.setItem('person', this.person);
-      channel.joinRoom(this.currentRoom, this.person, (hands) => {
-        let myHand = hands.filter(h => h === this.person)[0];
+      channel.joinRoom(this.currentRoom, this.person, (err, id) => {
+        if (err != null) {
+          this.channelError = err;
+          return;
+        }
+        this.id = id;
+      }, (hands) => {
+        let myHand = hands.filter(h => h.id === this.id)[0];
         if(!myHand) {
           this.handRaised = false;
         } 
@@ -132,7 +162,7 @@ export default {
         this.hands = hands
         this.$forceUpdate();
       }, (quicks) => {
-        let myQuick = quicks.filter(h => h === this.person)[0];
+        let myQuick = quicks.filter(h => h.id === this.id)[0];
         if(!myQuick) {
           this.quickRaised = false;
         }
@@ -152,6 +182,11 @@ export default {
           hearts.addHearts(icon);
         }
       });
+    },
+    popout() {
+      let hash = btoa(JSON.stringify({person: this.person, room: this.room}));
+      console.log(process.env.VUE_APP_FRONTEND_HOST + '#' + hash);
+      window.open(process.env.VUE_APP_FRONTEND_HOST + '#' + hash, 'hands_window_popout', 'width=300,height=800,menubar=0,toolbar=0,location=0');
     },
     notifyIfNecessary(oldHands, newHands, title) {
       if (!this.electronWindow) {
@@ -187,19 +222,15 @@ export default {
       this.participants = [];
       channel.leaveRoom();
     },
-    toggleHand(isRaised, otherPerson) {
-      if (!otherPerson) {
-        this.handRaised = isRaised || false;
-      }
-      let msg = isRaised ? "raise_hand" : "lower_hand"
-      channel.push(msg, {person: otherPerson || this.person})
+    toggleHand() {
+      this.handRaised = !this.handRaised;
+      let msg = this.handRaised ? "raise_hand" : "lower_hand"
+      channel.push(msg, {person: this.person, id: this.id})
     },
-    toggleQuick(isRaised, otherPerson) {
-      if (!otherPerson) {
-        this.quickRaised = isRaised || false;
-      }
-      let msg = isRaised ? "raise_quick" : "lower_quick"
-      channel.push(msg, {person: otherPerson || this.person})
+    toggleQuick() {
+      this.quickRaised = !this.quickRaised;
+      let msg = this.quickRaised ? "raise_quick" : "lower_quick" 
+      channel.push(msg, {person: this.person, id: this.id})
     }
 
   }
