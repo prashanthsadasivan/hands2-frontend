@@ -188,6 +188,7 @@ export default {
       console.log(process.env.VUE_APP_FRONTEND_HOST + '#' + hash);
       window.open(process.env.VUE_APP_FRONTEND_HOST + '#' + hash, 'hands_window_popout', 'width=300,height=800,menubar=0,toolbar=0,location=0');
       if (window && window.parent) {
+        console.log('app popoout postmessage');
         window.parent.postMessage({hands_popout: true}, '*');
       }
     },
