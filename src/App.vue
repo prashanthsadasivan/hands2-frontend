@@ -14,12 +14,12 @@
       </div>
     </div>
     <div v-if="currentRoom != null">
-      <button class="btn btn-primary input-group-btn" @click="exitRoom()">Exit room </button>
+      <button class="btn btn-primary input-group-btn exit" @click="exitRoom()">Exit</button>
+      <button v-if="!isPopout" class="btn btn-action s-circle popout" @click="popout()">↥</button>
       <div class="applaud-group">
         <button class="btn btn-action s-circle" @click="applaud('👏')">👏</button>
         <button class="btn btn-action s-circle" @click="applaud('👎')">👎</button>
         <button class="btn btn-action s-circle" @click="applaud('🤷‍♀️')">🤷‍♀️</button>
-        <button v-if="!isPopout" class="btn btn-action s-circle" @click="popout()">↥</button>
       </div>
       <div style="margin: 60px;">
         <div>
@@ -255,7 +255,19 @@ export default {
 
 .applaud-group {
   position: absolute;
-  top:15px;
-  right: 15px;
+  bottom: 40px;
+  right: 5px;
+}
+
+.popout {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
+.exit {
+  position: absolute;
+  top: 5px;
+  left: 5px;
 }
 </style>
