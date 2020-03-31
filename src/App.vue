@@ -187,6 +187,9 @@ export default {
       let hash = btoa(JSON.stringify({person: this.person, room: this.room}));
       console.log(process.env.VUE_APP_FRONTEND_HOST + '#' + hash);
       window.open(process.env.VUE_APP_FRONTEND_HOST + '#' + hash, 'hands_window_popout', 'width=300,height=800,menubar=0,toolbar=0,location=0');
+      if (window && window.parent) {
+        window.parent.postMessage({hands_popout: true}, '*');
+      }
     },
     notifyIfNecessary(oldHands, newHands, title) {
       if (!this.electronWindow) {
