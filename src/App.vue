@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <modal name="settings">
+    <modal name="settings" width="300">
       <div class="settings-modal">
         <h2> Settings </h2>
         <div class="form-group">
