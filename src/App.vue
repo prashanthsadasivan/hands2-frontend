@@ -84,7 +84,7 @@ import channel from './socket.js'
 import hearts from './hearts.js'
 const notificationSound = new Howl({
   src: ['goose.mp3'],
-  volume: 0.4
+  volume: 0.2
 });
 
 export default {
