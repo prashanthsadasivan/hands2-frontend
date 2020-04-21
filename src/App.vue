@@ -24,7 +24,7 @@
       <div class="checkbox-group">
         <label class="form-switch">
           <input type="checkbox" v-model="shouldNotify">
-          <i class="form-icon"></i>Sound Notification?
+          <i class="form-icon"></i>Sounds
         </label>
       </div>
       <div style="margin: 60px;">
@@ -57,7 +57,8 @@ import {Howl} from 'howler';
 import channel from './socket.js'
 import hearts from './hearts.js'
 const notificationSound = new Howl({
-  src: ['sound.mp3']
+  src: ['goose.mp3'],
+  volume: 0.4
 });
 
 export default {
@@ -82,7 +83,7 @@ export default {
       quickInitialized: false,
       participants: [],
       electronWindow: null,
-      shouldNotify: false,
+      shouldNotify: true,
       referrer: document.referrer
     };
   },
@@ -257,7 +258,7 @@ export default {
 
 .checkbox-group {
   position: absolute;
-  top: 60px;
-  right: 15px;
+  bottom: 80px;
+  right: 5px;
 }
 </style>
