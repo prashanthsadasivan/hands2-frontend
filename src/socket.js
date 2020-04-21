@@ -9,13 +9,19 @@ export default {
   push(msg, payload) {
     channel.push(msg, payload);
   },
-  joinRoom(room, person, handsCB, quicksCB, presenceCb, applaudCb) {
+  joinRoom(room, person, idCb, handsCB, quicksCB, presenceCb, applaudCb) {
     socket.connect();
     channel = socket.channel(`room:${room}`, {person})
     presence = new Presence(channel);
     channel.join()
-      .receive("ok", resp => { console.log("Joined successfully", resp) })
-      .receive("error", resp => { console.log("Unable to join", resp) })
+      .receive("ok", resp => {
+        idCb(null, resp.id);
+        console.log("Joined successfully", resp);
+      })
+      .receive("error", resp => {
+        idCb(resp, null);
+        console.log("Unable to join", resp)
+      });
     channel.on("hands", payload => {
       console.log('hands', payload)
       handsCB(payload.hands)

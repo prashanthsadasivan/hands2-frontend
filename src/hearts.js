@@ -37,7 +37,6 @@ class Heart {
   }
   
   update() {
-    console.log('update', this.scale, this.grow, this.x, this.y, this.speed);
      this.alpha = ( this.alpha > 0 ) ? ( this.alpha - 0.0045 ) : this.alpha; 
      this.alpha = ( this.alpha < 0 ) ? 0 : this.alpha; 
      
@@ -86,6 +85,9 @@ export default {
   addHearts(icon) {
     if (stopped) {
       this.startLoop();
+    }
+    if (hearts.length < 10) {
+      hearts.push(new Heart(icon));
     }
     hearts.push(new Heart(icon));
   }
