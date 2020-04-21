@@ -84,14 +84,16 @@ export default {
       participants: [],
       electronWindow: null,
       shouldNotify: true,
-      referrer: document.referrer
+      referrer: document.referrer,
+      moderatorMode: false,
     };
   },
   mounted() {
     this.$nextTick(function () {
       if (document.referrer && document.referrer != "") {
         let splits = document.referrer.split("/");
-        this.room = splits[splits.length - 1];
+        let referrer = splits[splits.length - 1]
+        this.room = referrer.split('?')[0].split('#')[0];
       }
       let localPerson = localStorage.getItem('person');
       if ( localPerson && localPerson != '') {
