@@ -1,5 +1,20 @@
 <template>
   <div id="app">
+    <modal name="settings">
+      <div class="settings-modal">
+        <h2> Settings </h2>
+        <div class="form-group">
+            <label class="form-switch">
+              <input type="checkbox" v-model="shouldNotify">
+              <i class="form-icon"></i>Play sound when someone needs to speak
+            </label>
+            <label class="form-switch">
+              <input type="checkbox" v-model="isModerator">
+              <i class="form-icon"></i>I am the moderator
+            </label>
+        </div>
+      </div>
+    </modal>
     <div v-if="currentRoom == null" v-bind:class="{'has-error': personError || roomError}" style="margin: 60px">
       <div class="form-group">
         <label class="form-label" for="room-input">Room</label>
@@ -15,17 +30,20 @@
     </div>
     <div v-if="currentRoom != null">
       <button class="btn btn-primary input-group-btn exit" @click="exitRoom()">Exit</button>
-      <button v-if="!isPopout" class="btn btn-action s-circle popout" @click="popout()">↥</button>
+      <div class="topRight">
+        <button class="btn btn-action btn-primary s-circle" @click="showSettings()">
+          <i class="icon icon-menu"></i>
+        </button>
+        <button v-if="!isPopout" class="btn btn-action btn-primary s-circle" @click="popout()">
+          <i class="icon icon-upward"></i>
+        </button>
+      </div>
       <div class="applaud-group">
         <button class="btn btn-action s-circle" @click="applaud('👏')">👏</button>
         <button class="btn btn-action s-circle" @click="applaud('👎')">👎</button>
         <button class="btn btn-action s-circle" @click="applaud('🤷‍♀️')">🤷‍♀️</button>
       </div>
       <div class="checkbox-group">
-        <label class="form-switch">
-          <input type="checkbox" v-model="shouldNotify">
-          <i class="form-icon"></i>Sounds
-        </label>
       </div>
       <div style="margin: 60px;">
         <div>
@@ -34,12 +52,20 @@
         <div v-if="quicks.length">
           <h3>Quick Point</h3>
           <ol>
-            <li v-for="(quick, index) in quicks" :key="index">{{quick.person}}</li>
+            <li v-for="(quick, index) in quicks" :key="index">{{quick.person}}
+            <button v-if="isModerator" class="btn btn-sm btn-action btn-error s-circle" @click="toggleQuick(quick.id)">
+              <i class="icon icon-cross"></i>
+            </button>
+            </li>
           </ol>
         </div>
         <h3> Speaking Queue </h3>
         <ol>
-          <li v-for="(hand, index) in hands" :key="index">{{hand.person}}</li>
+          <li v-for="(hand, index) in hands" :key="index">{{hand.person}}
+          <button v-if="isModerator" class="btn btn-action btn-error btn-sm s-circle" @click="toggleHand(hand.id)">
+            <i class="icon icon-cross"></i>
+          </button>
+          </li>
         </ol>
       </div>
       <div style="position: absolute; bottom: 0; width:100%;">
@@ -85,7 +111,7 @@ export default {
       electronWindow: null,
       shouldNotify: true,
       referrer: document.referrer,
-      moderatorMode: false,
+      isModerator: false,
     };
   },
   mounted() {
@@ -129,7 +155,6 @@ export default {
   },
   methods: {
     goToRoom(room, person) {
-      console.log('go to room: ' +person ); 
       this.roomError = false;
       this.personError = false;
       if (room === null || room === '') {
@@ -165,14 +190,12 @@ export default {
           this.quickRaised = false;
         }
         this.quickInitialized = true;
-        console.log('notifyIfNecessary');
 
         this.notifyIfNecessary(this.quicks, quicks, '❗️ Quick Note');
         this.quicks = quicks;
 
         this.$forceUpdate();
       }, (participants) => {
-        console.log(participants);
         this.participants = participants;
         this.$forceUpdate();
       }, (person, icon) => {
@@ -186,7 +209,6 @@ export default {
       console.log(process.env.VUE_APP_FRONTEND_HOST + '#' + hash);
       window.open(process.env.VUE_APP_FRONTEND_HOST + '#' + hash, 'hands_window_popout', 'width=300,height=800,menubar=0,toolbar=0,location=0');
       if (window && window.parent) {
-        console.log('app popoout postmessage');
         window.parent.postMessage({hands_popout: true}, '*');
       }
     },
@@ -199,6 +221,9 @@ export default {
       if (this.shouldNotify && unseenHands && unseenHands.length && this.roomStateSynced) {
         notificationSound.play();
       }
+    },
+    showSettings() {
+      this.$modal.show('settings')
     },
     applaud(icon) {
       channel.push("applaud", {icon});
@@ -213,17 +238,30 @@ export default {
       this.participants = [];
       channel.leaveRoom();
     },
-    toggleHand() {
+    toggleHand(id) {
+      if (id && id !== this.id) {
+        // since this is not the same person, assume moderator
+        // lowering other person's hand.
+        let msg = "lower_hand"
+        channel.push(msg, {person: this.person, id: id})
+        return;
+      }
       this.handRaised = !this.handRaised;
       let msg = this.handRaised ? "raise_hand" : "lower_hand"
-      channel.push(msg, {person: this.person, id: this.id})
+      channel.push(msg, {person: this.person})
     },
-    toggleQuick() {
+    toggleQuick(id) {
+      if (id && id !== this.id) {
+        // since this is not the same person, assume moderator
+        // lowering other person's hand.
+        let msg = "lower_quick"
+        channel.push(msg, {person: this.person, id: id})
+        return;
+      }
       this.quickRaised = !this.quickRaised;
       let msg = this.quickRaised ? "raise_quick" : "lower_quick" 
-      channel.push(msg, {person: this.person, id: this.id})
+      channel.push(msg, {person: this.person})
     }
-
   }
 }
 </script>
@@ -246,10 +284,13 @@ export default {
   right: 5px;
 }
 
-.popout {
+.topRight {
   position: absolute;
   top: 5px;
   right: 5px;
+}
+.topRight > * {
+    margin: 0px 5px;
 }
 
 .exit {
@@ -262,5 +303,9 @@ export default {
   position: absolute;
   bottom: 80px;
   right: 5px;
+}
+.settings-modal {
+  margin: 20px 10px;
+
 }
 </style>
