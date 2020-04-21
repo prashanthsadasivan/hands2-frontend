@@ -21,6 +21,12 @@
         <button class="btn btn-action s-circle" @click="applaud('👎')">👎</button>
         <button class="btn btn-action s-circle" @click="applaud('🤷‍♀️')">🤷‍♀️</button>
       </div>
+      <div class="checkbox-group">
+        <label class="form-switch">
+          <input type="checkbox" v-model="shouldNotify">
+          <i class="form-icon"></i>Sound Notification?
+        </label>
+      </div>
       <div style="margin: 60px;">
         <div>
           Participants: <span v-for="(p, index) in participants" :key="index">{{p}}<span v-if="index < participants.length - 1">, </span></span>
@@ -47,14 +53,12 @@
 </template>
 
 <script>
+import {Howl} from 'howler';
 import channel from './socket.js'
 import hearts from './hearts.js'
-let ipcRenderer = null;
-if (!window.require) {
-  console.log('no window.require');
-}
-window.require = window.require || function() { return {ipcRenderer: null } }
-ipcRenderer = window.require('electron').ipcRenderer;
+const notificationSound = new Howl({
+  src: ['sound.mp3']
+});
 
 export default {
   name: 'App',
@@ -78,12 +82,12 @@ export default {
       quickInitialized: false,
       participants: [],
       electronWindow: null,
+      shouldNotify: false,
       referrer: document.referrer
     };
   },
   mounted() {
     this.$nextTick(function () {
-      console.log('mounted', ipcRenderer);
       if (document.referrer && document.referrer != "") {
         let splits = document.referrer.split("/");
         this.room = splits[splits.length - 1];
@@ -107,15 +111,6 @@ export default {
       if (this.room && this.person) {
         this.goToRoom(this.room, this.person);
       }
-      if (!ipcRenderer) {
-        return;
-      }
-      ipcRenderer.on('ready', (mb) => {
-        this.electronWindow = mb;
-        console.log('assigned electronWindow');
-        this.$forceUpdate();
-      });
-      ipcRenderer.send('app_mounted');
     })
   },
   computed: {
@@ -192,25 +187,14 @@ export default {
         window.parent.postMessage({hands_popout: true}, '*');
       }
     },
-    notifyIfNecessary(oldHands, newHands, title) {
-      if (!this.electronWindow) {
-        console.log('no menub ar');
-        return;
-      }
+    notifyIfNecessary(oldHands, newHands) {
       let oldHandsHash = oldHands.reduce((acc, x) => {
         acc[x] = true;
         return acc;
       }, {});
       let unseenHands = newHands.filter(h => !oldHandsHash[h] && h !== this.person);
-      console.log('oldHands', oldHands, 'newHands', newHands, 'unseenHands', unseenHands);
-      if (unseenHands && unseenHands.length && this.roomStateSynced) {
-        let myNotification = new Notification(title, {
-          body: 'From: ' + unseenHands.join(", ")
-        });
-
-        myNotification.onclick = () => {
-          console.log('clicked notification');
-        };
+      if (this.shouldNotify && unseenHands && unseenHands.length && this.roomStateSynced) {
+        notificationSound.play();
       }
     },
     applaud(icon) {
@@ -269,5 +253,11 @@ export default {
   position: absolute;
   top: 5px;
   left: 5px;
+}
+
+.checkbox-group {
+  position: absolute;
+  top: 60px;
+  right: 15px;
 }
 </style>
