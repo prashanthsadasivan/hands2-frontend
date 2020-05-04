@@ -15,6 +15,7 @@ class Heart {
      this.outer = document.createElement( "div" );
      this.outer.innerText = icon || "🎉";
      this.outer.style.display = "block";
+     this.outer.style.zIndex = "-999";
      this.outer.style.position = "absolute";
      this.outer.style.fontSize = "45px";
      this.outer.style.left = "-30px";

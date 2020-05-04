@@ -5,10 +5,6 @@
         <h2> Settings </h2>
         <div class="form-group">
             <label class="form-switch">
-              <input type="checkbox" v-model="shouldNotify">
-              <i class="form-icon"></i>Play sound when someone needs to speak
-            </label>
-            <label class="form-switch">
               <input type="checkbox" v-model="isModerator">
               <i class="form-icon"></i>I am the moderator
             </label>
@@ -39,9 +35,14 @@
         </button>
       </div>
       <div class="applaud-group">
+        <label class="form-switch">
+          <input type="checkbox" v-model="shouldPlaySounds">
+          <i class="form-icon"></i>Sounds
+        </label>
         <button class="btn btn-action s-circle" @click="applaud('👏')">👏</button>
+        <button class="btn btn-action s-circle" @click="applaud('👍')">👍</button>
         <button class="btn btn-action s-circle" @click="applaud('👎')">👎</button>
-        <button class="btn btn-action s-circle" @click="applaud('🤷‍♀️')">🤷‍♀️</button>
+        <button class="btn btn-action s-circle" @click="applaud('😮')">😮</button>
       </div>
       <div class="checkbox-group">
       </div>
@@ -82,10 +83,52 @@
 import {Howl} from 'howler';
 import channel from './socket.js'
 import hearts from './hearts.js'
+
+let totalSoundsPlaying = 0;
+
+function onend() {
+  console.log('onend');
+  totalSoundsPlaying--;
+}
+
+function onplay() {
+  totalSoundsPlaying++;
+}
 const notificationSound = new Howl({
   src: ['goose.mp3'],
   volume: 0.2
 });
+const noSound = new Howl({
+  src: ['no.mp3'],
+  volume: 0.2,
+  onplay,
+  onend
+});
+const yesSound = new Howl({
+  src: ['yes.mp3'],
+  volume: 0.2,
+  onplay,
+  onend
+});
+const applauseSound = new Howl({
+  src: ['applause-more.mp3'],
+  volume: 0.2,
+  onplay,
+  onend
+});
+const ooohSound = new Howl({
+  src: ['oooh.mp3'],
+  volume: 0.2,
+  onplay,
+  onend
+});
+
+const soundMap = {
+  '👏': applauseSound,
+  '👍': yesSound,
+  '👎': noSound,
+  '😮': ooohSound
+}
 
 export default {
   name: 'App',
@@ -109,7 +152,7 @@ export default {
       quickInitialized: false,
       participants: [],
       electronWindow: null,
-      shouldNotify: true,
+      shouldPlaySounds: true,
       referrer: document.referrer,
       isModerator: false,
     };
@@ -200,6 +243,7 @@ export default {
         this.$forceUpdate();
       }, (person, icon) => {
         if (person != this.person) {
+          this.playSoundForApplaud(icon);
           hearts.addHearts(icon);
         }
       });
@@ -218,7 +262,7 @@ export default {
         return acc;
       }, {});
       let unseenHands = newHands.filter(h => !oldHandsHash[h] && h !== this.person);
-      if (this.shouldNotify && unseenHands && unseenHands.length && this.roomStateSynced) {
+      if (this.shouldPlaySounds && unseenHands && unseenHands.length && this.roomStateSynced) {
         notificationSound.play();
       }
     },
@@ -227,7 +271,14 @@ export default {
     },
     applaud(icon) {
       channel.push("applaud", {icon});
+      this.playSoundForApplaud(icon);
       hearts.addHearts(icon);
+    },
+    playSoundForApplaud(icon) {
+      console.log(totalSoundsPlaying);
+      if (this.shouldPlaySounds && totalSoundsPlaying < 5) {
+        soundMap[icon].play();
+      }
     },
     exitRoom() {
       this.currentRoom = null;
