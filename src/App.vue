@@ -87,7 +87,6 @@ import hearts from './hearts.js'
 let totalSoundsPlaying = 0;
 
 function onend() {
-  console.log('onend');
   totalSoundsPlaying--;
 }
 
@@ -275,7 +274,6 @@ export default {
       hearts.addHearts(icon);
     },
     playSoundForApplaud(icon) {
-      console.log(totalSoundsPlaying);
       if (this.shouldPlaySounds && totalSoundsPlaying < 5) {
         soundMap[icon].play();
       }

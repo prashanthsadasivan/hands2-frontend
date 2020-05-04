@@ -23,11 +23,9 @@ export default {
         console.log("Unable to join", resp)
       });
     channel.on("hands", payload => {
-      console.log('hands', payload)
       handsCB(payload.hands)
     });
     channel.on("quicks", payload => {
-      console.log('quicks', payload)
       quicksCB(payload.hands)
     });
 
