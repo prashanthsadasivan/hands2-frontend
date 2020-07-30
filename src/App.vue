@@ -27,6 +27,7 @@
     <div v-if="currentRoom != null">
       <button class="btn btn-primary input-group-btn exit" @click="exitRoom()">Exit</button>
       <div class="topRight">
+        <button class="btn" @click="togglePoll()">{{pollActive ? 'End Poll' : 'Start Poll'}}</button>
         <button class="btn btn-action btn-primary s-circle" @click="showSettings()">
           <i class="icon icon-menu"></i>
         </button>
@@ -50,8 +51,10 @@
         <div>
           Participants: <span v-for="(p, index) in participants" :key="index">{{p}}<span v-if="index < participants.length - 1">, </span></span>
         </div>
-        <div v-if="quicks.length">
-          <h3>Quick Point</h3>
+        <Poll v-if="pollActive" :voted="personVoted" :personId="id" v-on:vote="updatePoll($event, true)" v-bind:yes-votes="pollYesCount" v-bind:no-votes="pollNoCount" v-bind:meh-votes="pollMehCount"/>
+        <div v-if="quicks.length" class="section">
+          <div class="divider"></div>
+          <h4>Quick Point</h4>
           <ol>
             <li v-for="(quick, index) in quicks" :key="index">{{quick.person}}
             <button v-if="isModerator" class="btn btn-sm btn-action btn-error s-circle" @click="toggleQuick(quick.id)">
@@ -60,14 +63,17 @@
             </li>
           </ol>
         </div>
-        <h3> Speaking Queue </h3>
-        <ol>
-          <li v-for="(hand, index) in hands" :key="index">{{hand.person}}
-          <button v-if="isModerator" class="btn btn-action btn-error btn-sm s-circle" @click="toggleHand(hand.id)">
-            <i class="icon icon-cross"></i>
-          </button>
-          </li>
-        </ol>
+        <div class="divider"></div>
+        <div>
+          <h4> Speaking Queue </h4>
+          <ol>
+            <li v-for="(hand, index) in hands" :key="index">{{hand.person}}
+            <button v-if="isModerator" class="btn btn-action btn-error btn-sm s-circle" @click="toggleHand(hand.id)">
+              <i class="icon icon-cross"></i>
+            </button>
+            </li>
+          </ol>
+        </div>
       </div>
       <div style="position: absolute; bottom: 0; width:100%;">
         <span>
@@ -83,6 +89,7 @@
 import {Howl} from 'howler';
 import channel from './socket.js'
 import hearts from './hearts.js'
+import Poll from './Poll.vue'
 
 let totalSoundsPlaying = 0;
 
@@ -132,6 +139,7 @@ const soundMap = {
 export default {
   name: 'App',
   components: {
+    Poll,
   },
   data() {
     return { 
@@ -154,6 +162,11 @@ export default {
       shouldPlaySounds: true,
       referrer: document.referrer,
       isModerator: false,
+      pollActive: false,
+      pollYesCount: 0,
+      pollNoCount: 0,
+      pollMehCount: 0,
+      personVoted: false,
     };
   },
   mounted() {
@@ -245,7 +258,30 @@ export default {
           this.playSoundForApplaud(icon);
           hearts.addHearts(icon);
         }
+      }, (result) => {
+        this.pollActive = result.active;
+        if (this.pollActive) {
+          this.personVoted = !!(result.voters.filter(id => { console.log(id); return id === this.id}).length);
+          this.pollYesCount = result.yes.length;
+          this.pollNoCount = result.no.length;
+          this.pollMehCount = result.meh.length;
+        } else {
+          this.resetPoll()
+        }
       });
+    },
+    updatePoll(value, shouldBroadcast) {
+      this.personVoted = true;
+      if (value === 'no') {
+        this.pollNoCount++;
+      } else if (value == 'yes') {
+        this.pollYesCount++;
+      } else if (value == 'meh') {
+        this.pollMehCount++;
+      }
+      if (shouldBroadcast) {
+        channel.push('poll_vote', {id: this.id, value: value});
+      }
     },
     popout() {
       let hash = btoa(JSON.stringify({person: this.person, room: this.room}));
@@ -257,16 +293,30 @@ export default {
     },
     notifyIfNecessary(oldHands, newHands) {
       let oldHandsHash = oldHands.reduce((acc, x) => {
-        acc[x] = true;
+        acc[x.id] = true;
         return acc;
       }, {});
-      let unseenHands = newHands.filter(h => !oldHandsHash[h] && h !== this.person);
+      let unseenHands = newHands.filter(h => !oldHandsHash[h.id] && h.id !== this.id);
+      console.log('shouldPlaySounds', this.shouldPlaySounds, 'unseenHands', unseenHands, 'roomStateSynced', this.roomStateSynced);
       if (this.shouldPlaySounds && unseenHands && unseenHands.length && this.roomStateSynced) {
         notificationSound.play();
       }
     },
     showSettings() {
       this.$modal.show('settings')
+    },
+    resetPoll() {
+      this.pollYesCount = 0;
+      this.pollNoCount = 0;
+      this.pollMehCount = 0;
+      this.personVoted = false;
+    },
+    togglePoll() {
+      this.pollActive = !this.pollActive;
+      if (!this.pollActive) {
+        this.resetPoll()
+      }
+      channel.push(this.pollActive ? 'poll_start' : 'poll_end', {});
     },
     applaud(icon) {
       channel.push("applaud", {icon});

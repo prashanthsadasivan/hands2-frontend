@@ -9,7 +9,7 @@ export default {
   push(msg, payload) {
     channel.push(msg, payload);
   },
-  joinRoom(room, person, idCb, handsCB, quicksCB, presenceCb, applaudCb) {
+  joinRoom(room, person, idCb, handsCB, quicksCB, presenceCb, applaudCb, pollCb) {
     socket.connect();
     channel = socket.channel(`room:${room}`, {person})
     presence = new Presence(channel);
@@ -31,6 +31,10 @@ export default {
 
     channel.on("applaud", payload => {
       applaudCb(payload.person, payload.icon);
+    });
+    channel.on("poll", payload => {
+      console.log('pollCB', payload);
+      pollCb(payload);
     });
     const listPeople = () => presenceCb(presence.list((id) => id));
     presence.onSync(listPeople);
